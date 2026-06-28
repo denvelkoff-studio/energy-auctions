@@ -1,0 +1,17 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# PHP / Composer (ако се добави по-късно)
+/vendor/
+composer.lock
+
+# Node (ако се добави build за асети)
+/node_modules/
+
+# Logs / temp
+*.log
+*.cache
