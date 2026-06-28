@@ -49,6 +49,13 @@ class Install {
 	 * Изпълнява се при деактивация — без триене на данни.
 	 */
 	public static function deactivate(): void {
+		// Спираме резервния WP-cron (системният cron остава за hPanel).
+		$timestamp = wp_next_scheduled( 'ea_close_auctions_fallback' );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, 'ea_close_auctions_fallback' );
+		}
+		wp_clear_scheduled_hook( 'ea_close_auctions_fallback' );
+
 		flush_rewrite_rules();
 	}
 
