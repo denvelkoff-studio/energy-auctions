@@ -1,0 +1,280 @@
+/**
+ * Energy Auctions — frontend стилове.
+ * Бранд: графит + син glow + злато. Шрифтове: Spectral (заглавия) / Inter (текст).
+ * Само класове с префикс .ea-* — темата energy-things може да ги override-не.
+ */
+
+.ea-auction {
+	--ea-graphite: #1c2128;
+	--ea-graphite-2: #262d36;
+	--ea-blue: #4ea1ff;
+	--ea-blue-glow: rgba(78, 161, 255, 0.45);
+	--ea-gold: #d4af37;
+	--ea-text: #e7ecf3;
+	--ea-muted: #9aa6b2;
+	--ea-radius: 12px;
+
+	font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	color: var(--ea-text);
+	background: var(--ea-graphite);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: var(--ea-radius);
+	padding: 1.5rem;
+	margin: 1rem 0;
+	box-shadow: 0 0 0 1px rgba(78, 161, 255, 0.05), 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* --- Badge --- */
+.ea-badge {
+	display: inline-block;
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	padding: 0.3rem 0.7rem;
+	border-radius: 999px;
+	margin-bottom: 1rem;
+}
+.ea-badge--active {
+	color: #061018;
+	background: var(--ea-blue);
+	box-shadow: 0 0 16px var(--ea-blue-glow);
+}
+.ea-badge--scheduled {
+	color: var(--ea-blue);
+	background: rgba(78, 161, 255, 0.12);
+	border: 1px solid rgba(78, 161, 255, 0.4);
+}
+.ea-badge--ended,
+.ea-badge--unsold {
+	color: var(--ea-muted);
+	background: rgba(255, 255, 255, 0.06);
+}
+.ea-badge--sold {
+	color: #1c2128;
+	background: var(--ea-gold);
+	box-shadow: 0 0 16px rgba(212, 175, 55, 0.4);
+}
+
+/* --- Текуща цена --- */
+.ea-current {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	margin-bottom: 1rem;
+}
+.ea-current__label {
+	font-size: 0.8rem;
+	color: var(--ea-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+.ea-current__amount {
+	font-family: 'Spectral', Georgia, serif;
+	font-size: 2.4rem;
+	font-weight: 700;
+	line-height: 1.1;
+	color: #fff;
+	text-shadow: 0 0 22px var(--ea-blue-glow);
+}
+.ea-current__amount .woocommerce-Price-amount {
+	color: inherit;
+}
+.ea-current__count {
+	font-size: 0.85rem;
+	color: var(--ea-muted);
+}
+
+/* --- Countdown --- */
+.ea-countdown {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	padding: 0.85rem 1rem;
+	margin-bottom: 1.25rem;
+	background: var(--ea-graphite-2);
+	border-radius: var(--ea-radius);
+	border-left: 3px solid var(--ea-blue);
+}
+.ea-countdown__label {
+	font-size: 0.72rem;
+	color: var(--ea-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.ea-countdown__value {
+	font-family: 'Spectral', Georgia, serif;
+	font-size: 1.4rem;
+	font-weight: 600;
+	color: var(--ea-blue);
+	font-variant-numeric: tabular-nums;
+}
+
+/* --- Форми --- */
+.ea-bid-form__label {
+	display: block;
+	font-size: 0.85rem;
+	color: var(--ea-muted);
+	margin-bottom: 0.4rem;
+}
+.ea-bid-form__row {
+	display: flex;
+	gap: 0.6rem;
+	align-items: stretch;
+}
+.ea-bid-form input[type='number'] {
+	flex: 1;
+	min-width: 0;
+	padding: 0.7rem 0.9rem;
+	font-size: 1.1rem;
+	color: var(--ea-text);
+	background: var(--ea-graphite-2);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 10px;
+}
+.ea-bid-form input[type='number']:focus {
+	outline: none;
+	border-color: var(--ea-blue);
+	box-shadow: 0 0 0 3px var(--ea-blue-glow);
+}
+.ea-bid-form__submit,
+.ea-buynow-form__submit {
+	cursor: pointer;
+	font-weight: 600;
+	border: none;
+	border-radius: 10px;
+	padding: 0.7rem 1.4rem;
+	transition: transform 0.08s ease, box-shadow 0.2s ease;
+}
+.ea-bid-form__submit {
+	color: #061018;
+	background: var(--ea-blue);
+	box-shadow: 0 0 20px var(--ea-blue-glow);
+}
+.ea-bid-form__submit:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 0 28px var(--ea-blue-glow);
+}
+.ea-buynow-form {
+	margin-top: 0.8rem;
+}
+.ea-buynow-form__submit {
+	width: 100%;
+	color: #1c2128;
+	background: linear-gradient(135deg, #e8c75a, var(--ea-gold));
+	box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+}
+.ea-buynow-form__submit:hover {
+	transform: translateY(-1px);
+}
+
+/* --- Notices --- */
+.ea-login-notice,
+.ea-owner-notice,
+.ea-closed-notice {
+	padding: 0.85rem 1rem;
+	border-radius: 10px;
+	background: var(--ea-graphite-2);
+	color: var(--ea-muted);
+	font-size: 0.92rem;
+}
+.ea-login-notice a {
+	color: var(--ea-blue);
+}
+.ea-closed-notice--sold {
+	color: var(--ea-gold);
+}
+
+/* --- История --- */
+.ea-history {
+	margin-top: 1.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	padding-top: 1rem;
+}
+.ea-history__title {
+	font-family: 'Spectral', Georgia, serif;
+	font-size: 1.1rem;
+	margin: 0 0 0.6rem;
+	color: var(--ea-text);
+}
+.ea-history__empty {
+	color: var(--ea-muted);
+	font-size: 0.9rem;
+}
+.ea-history__table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9rem;
+}
+.ea-history__table th {
+	text-align: left;
+	color: var(--ea-muted);
+	font-weight: 600;
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 0.4rem 0.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ea-history__table td {
+	padding: 0.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.ea-history__table tr:first-child td {
+	color: var(--ea-blue);
+	font-weight: 600;
+}
+
+/* --- Архив / списък с активни търгове --- */
+.ea-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 1.25rem;
+	margin: 1.5rem 0;
+}
+.ea-card {
+	display: flex;
+	flex-direction: column;
+	background: var(--ea-graphite, #1c2128);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 12px;
+	overflow: hidden;
+	color: #e7ecf3;
+	text-decoration: none;
+	transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+.ea-card:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+.ea-card__thumb img {
+	width: 100%;
+	height: 180px;
+	object-fit: cover;
+	display: block;
+}
+.ea-card__body {
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+.ea-card__title {
+	font-family: 'Spectral', Georgia, serif;
+	font-size: 1.05rem;
+	margin: 0;
+}
+.ea-card__price {
+	color: #4ea1ff;
+	font-weight: 700;
+}
+.ea-card__meta {
+	font-size: 0.8rem;
+	color: #9aa6b2;
+}
+
+@media ( max-width: 600px ) {
+	.ea-bid-form__row {
+		flex-direction: column;
+	}
+}

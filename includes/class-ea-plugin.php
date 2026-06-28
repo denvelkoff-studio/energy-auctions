@@ -10,6 +10,9 @@ declare( strict_types=1 );
 namespace EnergyAuctions;
 
 use EnergyAuctions\Admin\Product_Data;
+use EnergyAuctions\Frontend\Bidding;
+use EnergyAuctions\Frontend\Product_Display;
+use EnergyAuctions\Frontend\Shortcodes;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -86,10 +89,30 @@ final class Plugin {
 		// Регистрация на product type-а (frontend + общо).
 		Product_Type::instance();
 
+		// Наддаване: admin-post handlers + cart hooks (нужно и в админ, и отпред).
+		Bidding::instance();
+
+		// Затваряне на търгове (cron + lifecycle guards).
+		Closer::instance();
+
+		// Имейли.
+		Mailer::instance();
+
 		// Админ функционалност.
 		if ( is_admin() ) {
 			Product_Data::instance();
 		}
+
+		// Frontend визуализация и AJAX.
+		if ( ! is_admin() ) {
+			Product_Display::instance();
+		}
+
+		// AJAX endpoint-ите трябва да са регистрирани и в админ контекст (admin-ajax.php).
+		Ajax::instance();
+
+		// Шорткодове (списък с активни търгове).
+		Shortcodes::instance();
 	}
 
 	/**
