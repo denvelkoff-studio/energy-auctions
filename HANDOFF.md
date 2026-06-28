@@ -99,6 +99,14 @@ languages/energy-auctions.pot
 - `Time` използва абсолютни timestamps (`time()` + `wp_timezone()`), за да няма offset бъгове.
 - Buy-now ползва нативната кошница; cron-победителят получава генерирана поръчка — два отделни, но непрепокриващи се пътя (buy-now вече е `sold`, cron го прескача).
 - uninstall е консервативен (пази офертите освен при `EA_REMOVE_ALL_DATA`).
+- **Формите се обработват на `template_redirect`** (frontend контекст), НЕ през `admin-post.php` — иначе `WC()->cart` и `wc_add_notice` не са заредени (admin контекст). Форма → POST към permalink-а на продукта с `ea_action`.
+- Buy-now: добавя в кошницата ПЪРВО, маркира `sold` само при успех; поръчката се свързва с търга на `woocommerce_checkout_order_processed` / `woocommerce_store_api_checkout_order_processed` (класически + block checkout) → `_ea_order_id`, `_ea_due_date`.
+- Таблицата `ea_bids` е `ENGINE=InnoDB` (row lock-овете изискват InnoDB).
+
+### Поправки след code review (Фаза 2–5)
+- ❌→✅ admin-post контекст бъг (cart/notices липсваха) → преместено на `template_redirect`.
+- ❌→✅ buy-now поръчка вече се проследява от `sweep_unpaid`.
+- ❌→✅ явно `ENGINE=InnoDB`.
 
 ## Отворени въпроси / отложено (по дизайн)
 - Dutch/sealed/reverse, auto/proxy bidding (колоните `is_auto`/`max_amount` са готови за това), watchlist, такса участие, Stripe card-hold — извън MVP.

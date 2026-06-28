@@ -51,26 +51,35 @@ class Bidding {
 	 * Закача hook-овете.
 	 */
 	private function hooks(): void {
-		add_action( 'admin_post_ea_place_bid', array( $this, 'handle_place_bid' ) );
-		add_action( 'admin_post_nopriv_ea_place_bid', array( $this, 'handle_guest' ) );
-		add_action( 'admin_post_ea_buy_now', array( $this, 'handle_buy_now' ) );
-		add_action( 'admin_post_nopriv_ea_buy_now', array( $this, 'handle_guest' ) );
+		// Обработваме формите във frontend контекст (template_redirect),
+		// за да са налични WC()->cart и wc_add_notice (admin-post.php е admin
+		// контекст, където те НЕ се зареждат).
+		add_action( 'template_redirect', array( $this, 'maybe_handle' ) );
 
 		// Кошница: пази auction продуктите да не се добавят по стандартния път.
 		add_filter( 'woocommerce_add_to_cart_validation', array( $this, 'guard_add_to_cart' ), 10, 2 );
 		// Цена в кошницата за „Купи сега“.
 		add_action( 'woocommerce_before_calculate_totals', array( $this, 'set_buy_now_cart_price' ), 20 );
+		// Свързваме „Купи сега“ поръчката с търга (за sweep_unpaid + плащане).
+		// След като поръчката е записана (има ID). Покриваме класически и block checkout.
+		add_action( 'woocommerce_checkout_order_processed', array( $this, 'link_buy_now_order_classic' ), 10, 3 );
+		add_action( 'woocommerce_store_api_checkout_order_processed', array( $this, 'link_buy_now_order' ), 10, 1 );
 	}
 
 	/**
-	 * Гост опит за наддаване → обратно с грешка.
+	 * Диспечер: проверява за нашите POST действия във frontend заявка.
 	 */
-	public function handle_guest(): void {
-		$this->redirect_with_notice(
-			wp_get_referer() ?: home_url(),
-			__( 'Трябва да сте влезли в профила си, за да наддавате.', 'energy-auctions' ),
-			'error'
-		);
+	public function maybe_handle(): void {
+		if ( empty( $_POST['ea_action'] ) || ! is_string( $_POST['ea_action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return;
+		}
+		$action = sanitize_key( wp_unslash( $_POST['ea_action'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		if ( 'place_bid' === $action ) {
+			$this->handle_place_bid();
+		} elseif ( 'buy_now' === $action ) {
+			$this->handle_buy_now();
+		}
 	}
 
 	/**
@@ -168,6 +177,25 @@ class Bidding {
 			$this->redirect_with_notice( $redirect, __( 'Търгът вече не е активен.', 'energy-auctions' ), 'error' );
 		}
 
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			$this->redirect_with_notice( $redirect, __( 'Кошницата не е достъпна. Опитайте отново.', 'energy-auctions' ), 'error' );
+		}
+
+		// Добавяме в кошницата ПЪРВО — затваряме търга само при успех.
+		$this->buy_now_in_progress = true;
+		$added = WC()->cart->add_to_cart(
+			$auction_id,
+			1,
+			0,
+			array(),
+			array( 'ea_buy_now' => wc_format_decimal( $buy_now ) )
+		);
+		$this->buy_now_in_progress = false;
+
+		if ( ! $added ) {
+			$this->redirect_with_notice( $redirect, __( 'Неуспешно добавяне в кошницата. Опитайте отново.', 'energy-auctions' ), 'error' );
+		}
+
 		// Затваряме търга като продаден на този купувач.
 		$product->set_ea_status( 'sold' );
 		$product->update_meta_data( '_ea_winner_id', $user_id );
@@ -178,20 +206,7 @@ class Bidding {
 		// Записваме офертата „купи сега“ в историята.
 		$this->record_buy_now_bid( $auction_id, $user_id, $buy_now );
 
-		// Добавяме в кошницата с флаг за цената.
-		$this->buy_now_in_progress = true;
-		if ( function_exists( 'WC' ) && WC()->cart ) {
-			WC()->cart->add_to_cart(
-				$auction_id,
-				1,
-				0,
-				array(),
-				array( 'ea_buy_now' => wc_format_decimal( $buy_now ) )
-			);
-		}
-		$this->buy_now_in_progress = false;
-
-		do_action( 'ea_auction_sold', $auction_id, $user_id, $buy_now, 'buy_now' );
+		do_action( 'ea_auction_sold', $auction_id, $user_id, $buy_now, 'buy_now', 0 );
 
 		// Към checkout.
 		$checkout = function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : home_url();
@@ -218,6 +233,56 @@ class Bidding {
 			),
 			array( '%d', '%d', '%f', '%d', '%s' )
 		);
+	}
+
+	/**
+	 * Класически checkout: ($order_id, $posted_data, $order).
+	 *
+	 * @param int            $order_id ID.
+	 * @param array          $posted   Данни (неизползвани).
+	 * @param \WC_Order|null $order    Поръчка.
+	 */
+	public function link_buy_now_order_classic( $order_id, $posted = array(), $order = null ): void {
+		if ( ! $order instanceof \WC_Order ) {
+			$order = wc_get_order( $order_id );
+		}
+		if ( $order instanceof \WC_Order ) {
+			$this->link_buy_now_order( $order );
+		}
+	}
+
+	/**
+	 * Свързва „Купи сега“ поръчката с търга (sweep_unpaid + _ea_order_id).
+	 * Източва от line items на поръчката (а не от кошницата, която вече може
+	 * да е изчистена при block checkout).
+	 *
+	 * @param \WC_Order $order Поръчката.
+	 */
+	public function link_buy_now_order( $order ): void {
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+		// Проверяваме дали в поръчката има auction продукт.
+		foreach ( $order->get_items() as $item ) {
+			$product = $item->get_product();
+			if ( ! $product instanceof \EnergyAuctions\Product\Auction_Product ) {
+				continue;
+			}
+			$auction_id = $product->get_id();
+
+			// Свързваме само ако този търг е продаден чрез „Купи сега“ на този купувач.
+			if ( (int) $product->get_meta( '_ea_winner_id' ) !== (int) $order->get_customer_id() ) {
+				continue;
+			}
+
+			$order->update_meta_data( '_ea_auction_id', $auction_id );
+			$order->update_meta_data( '_ea_due_date', Time::add_days( Time::now_mysql(), \EnergyAuctions\Closer::payment_due_days() ) );
+			$order->save();
+
+			$product->update_meta_data( '_ea_order_id', $order->get_id() );
+			$product->save();
+			break;
+		}
 	}
 
 	/**

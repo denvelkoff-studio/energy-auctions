@@ -93,7 +93,7 @@ class Install {
 			KEY auction_amount (auction_id, amount),
 			KEY auction_created (auction_id, created_at),
 			KEY user_id (user_id)
-		) {$charset_collate};";
+		) ENGINE=InnoDB {$charset_collate};";
 
 		dbDelta( $sql );
 	}

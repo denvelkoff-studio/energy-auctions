@@ -194,10 +194,10 @@ class Product_Display {
 			return;
 		}
 
-		$action = esc_url( admin_url( 'admin-post.php' ) );
+		$action = esc_url( (string) get_permalink( $auction_id ) );
 
 		echo '<form class="ea-bid-form" method="post" action="' . $action . '">';
-		echo '<input type="hidden" name="action" value="ea_place_bid" />';
+		echo '<input type="hidden" name="ea_action" value="place_bid" />';
 		echo '<input type="hidden" name="ea_auction_id" value="' . esc_attr( (string) $auction_id ) . '" />';
 		wp_nonce_field( 'ea_place_bid_' . $auction_id, 'ea_bid_nonce' );
 
@@ -221,7 +221,7 @@ class Product_Display {
 		// „Купи сега“.
 		if ( $buy_now > 0 ) {
 			echo '<form class="ea-buynow-form" method="post" action="' . $action . '">';
-			echo '<input type="hidden" name="action" value="ea_buy_now" />';
+			echo '<input type="hidden" name="ea_action" value="buy_now" />';
 			echo '<input type="hidden" name="ea_auction_id" value="' . esc_attr( (string) $auction_id ) . '" />';
 			wp_nonce_field( 'ea_buy_now_' . $auction_id, 'ea_buy_now_nonce' );
 			echo '<button type="submit" class="button ea-buynow-form__submit">';
