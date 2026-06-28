@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace EnergyAuctions\Admin;
 
 use EnergyAuctions\Plugin;
+use EnergyAuctions\Time;
 use WC_Product;
 
 defined( 'ABSPATH' ) || exit;
@@ -48,9 +49,58 @@ class Product_Data {
 	private function hooks(): void {
 		add_filter( 'woocommerce_product_data_tabs', array( $this, 'add_data_tab' ) );
 		add_action( 'woocommerce_product_data_panels', array( $this, 'render_panel' ) );
-		add_action( 'woocommerce_process_product_meta', array( $this, 'save' ), 10, 1 );
+		// Приоритет 20 — след като WC core зададе типа на продукта.
+		add_action( 'woocommerce_process_product_meta', array( $this, 'save' ), 20, 1 );
 		add_action( 'admin_notices', array( $this, 'render_errors' ) );
 		add_action( 'admin_head', array( $this, 'inline_styles' ) );
+
+		// Колона „Търг“ в списъка с продукти.
+		add_filter( 'manage_product_posts_columns', array( $this, 'add_status_column' ) );
+		add_action( 'manage_product_posts_custom_column', array( $this, 'render_status_column' ), 10, 2 );
+	}
+
+	/**
+	 * Добавя колона „Търг“ след колоната с име.
+	 *
+	 * @param array<string,string> $columns Колони.
+	 * @return array<string,string>
+	 */
+	public function add_status_column( array $columns ): array {
+		$new = array();
+		foreach ( $columns as $key => $label ) {
+			$new[ $key ] = $label;
+			if ( 'name' === $key ) {
+				$new['ea_auction'] = __( 'Търг', 'energy-auctions' );
+			}
+		}
+		return $new;
+	}
+
+	/**
+	 * Рендира съдържанието на колоната „Търг“.
+	 *
+	 * @param string $column  Колона.
+	 * @param int    $post_id ID.
+	 */
+	public function render_status_column( string $column, int $post_id ): void {
+		if ( 'ea_auction' !== $column ) {
+			return;
+		}
+		$product = wc_get_product( $post_id );
+		if ( ! $product instanceof \EnergyAuctions\Product\Auction_Product ) {
+			echo '—';
+			return;
+		}
+		$status = $product->get_ea_status();
+		$end    = $product->get_ea_end_date();
+		$count  = \EnergyAuctions\Bids::get_count( $post_id );
+
+		printf(
+			'<strong>%s</strong><br><small>%s</small><br><small>%s</small>',
+			esc_html( $status ),
+			esc_html( sprintf( /* translators: %d count */ _n( '%d оферта', '%d оферти', $count, 'energy-auctions' ), $count ) ),
+			esc_html( '' !== $end ? Time::format( $end ) : '' )
+		);
 	}
 
 	/**
@@ -330,9 +380,9 @@ class Product_Data {
 			return 'scheduled';
 		}
 
-		$now   = current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
-		$start = strtotime( $start_date );
-		$end   = strtotime( $end_date );
+		$now   = Time::now_ts();
+		$start = Time::to_ts( $start_date );
+		$end   = Time::to_ts( $end_date );
 
 		if ( $now < $start ) {
 			return 'scheduled';
