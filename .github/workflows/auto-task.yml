@@ -1,0 +1,104 @@
+# САМОХОДЕН РЕЖИМ - Code сесия без куриер. ОБЩ ШАБЛОН за всички repo-та.
+#
+# Тригер: push в main/staging, който пипа TASKS.md. Cowork дописва задачите,
+# пушва - и Claude Code ги изпълнява ПОРЕД, ДОКРАЙ, пише REPORT.md и пушва.
+#
+# ЗАЩО ДВА JOB-а: claude-code-action@v1 НЕ приема събитие push
+# ("Unsupported event type: push"), затова job redispatch превежда push-а в
+# workflow_dispatch, а Claude стъпката е само в job run-tasks.
+# allowed_bots е ЗАДЪЛЖИТЕЛЕН - иначе рънът от relay-а пада с
+# "Workflow initiated by non-human actor".
+#
+# Пази се от цикъл: paths е само TASKS.md (агентът НЕ пипа TASKS.md -
+# маркирането [x] е на Cowork) + проверка кой е автор на push-а + concurrency.
+
+name: Auto task (TASKS.md)
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - "TASKS.md"
+  workflow_dispatch: {}
+
+concurrency:
+  group: auto-task-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  redispatch:
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Preprati push-a kato workflow_dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run "${{ github.workflow }}" --ref "${{ github.ref_name }}" --repo "${{ github.repository }}"
+
+  run-tasks:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - name: Preflight - ima li sekret
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Липсва секрет CLAUDE_CODE_OAUTH_TOKEN (org ниво: denvelkoff-studio - Settings - Secrets and variables - Actions)."
+            exit 1
+          fi
+          echo "секретът е наличен"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code - izpalni TASKS.md
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: "github-actions"
+          show_full_output: true
+          claude_args: >-
+            --max-turns 200
+            --allowedTools "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,WebFetch"
+          prompt: |
+            продължи по TASKS.md
+
+            Работиш по repo ${{ github.repository }}, клонирано в текущата папка,
+            на клон ${{ github.ref_name }}.
+
+            1. Прочети CLAUDE.md (ако има - картата на проекта), после REPORT.md,
+               накрая TASKS.md.
+            2. Изпълни неотметнатите задачи от TASKS.md ПОРЕД и ДОКРАЙ, без да
+               спираш за одобрение и без да питаш. Ако REPORT.md вече описва
+               задача като завършена - прескочи я.
+            3. Всяка задача има критерий "ГОТОВО" - не приключвай, докато не е
+               изпълнен. Ако проектът има build/тестове (package.json, scripts/),
+               пусни ги и те трябва да минават чисто преди push.
+            4. Накрая допиши REPORT.md: какво е направено, какво е проверено,
+               SHA-тата, самостоятелни решения, къде си спрял и защо.
+            5. Commit + push в ${{ github.ref_name }}. Деплоят е автоматичен, ако
+               repo-то има deploy.yml.
+
+            АБСОЛЮТНО ЗАБРАНЕНО: да пипаш TASKS.md - него го пише само Cowork.
+            Ако го промениш, този workflow се самозацикля.
+
+            НЕ МОЖЕШ да пушваш файлове под .github/workflows (токенът няма
+            workflows scope). Ако задача иска промяна на workflow - напиши
+            финалния YAML в REPORT.md в код блок и остави Cowork да го качи.
+
+            Всички суми само в EUR, никога в лева. Не измисляй числа и не слагай
+            плейсхолдъри. Ако нещо изисква решение, което не е в PLAN.md - запиши
+            го като въпрос в REPORT.md, в секция "ТРЯБВА ОТ DENISLAV", и продължи.
