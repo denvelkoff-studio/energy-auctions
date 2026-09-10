@@ -73,7 +73,7 @@ jobs:
           claude_args: >-
             --model opus
             --max-turns 200
-            --allowedTools "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,WebFetch"
+            --allowedTools "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,WebFetch,Agent"
           prompt: |
             продължи по TASKS.md
 
