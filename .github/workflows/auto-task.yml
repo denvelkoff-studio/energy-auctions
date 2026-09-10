@@ -71,6 +71,7 @@ jobs:
           allowed_bots: "github-actions"
           show_full_output: true
           claude_args: >-
+            --model opus
             --max-turns 200
             --allowedTools "Bash,Read,Write,Edit,MultiEdit,Glob,Grep,WebFetch"
           prompt: |
